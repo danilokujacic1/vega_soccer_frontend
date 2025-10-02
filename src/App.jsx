@@ -5,12 +5,30 @@ function App() {
   const [matches, setMatches] = useState([]);
   const [isMatchesLoading, setIsMatchesLoading] = useState(true);
   const [players, setPlayers] = useState([]);
+  const [loginState, setLoginState] = useState({
+    username: '',
+    password: ''
+  })
+  const [matchState, setMatchState] = useState({
+    first_player: '',
+    first_player_score: '',
+    second_player: '',
+    second_player_score: ''
+  })
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isPlayersLoading, setIsPlayersLoading] = useState(true);
 
   useEffect(() => {
 
     setIsPlayersLoading(true);
     setIsMatchesLoading(true);
+    fetch(`${import.meta.env.VITE_API_URL}/logged-in`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }).then(res => res.json()).then(data => {
+     setIsLoggedIn(data.loggedIn)
+    })
     fetch(`${import.meta.env.VITE_API_URL}/matches`).then(res => res.json()).then(data => {
       setIsMatchesLoading(false)
       setMatches(data.matches)
@@ -30,6 +48,48 @@ function App() {
 
         {/* Tab Navigation */}
         <div className="bg-white rounded-t-lg shadow-md">
+          {!isLoggedIn ? <button onClick={() => {
+            setActiveTab('login')
+          }} className="my-4 mx-auto block pointer rounded-sm bg-indigo-600 text-white px-4 py-2">Login</button> : <div className="flex gap-3 flex-col py-4 px-2">
+          <select onChange={event => {
+                setMatchState(prev => ({ ...prev, first_player: event.target.value }));
+              }} className='py-2 px-4 rounded-sm border-gray-100 border-2 max-w-96' placeholder='Username' >
+                {players.map(player => <option key={player.id} value={player.name}>{ player.name}</option>) }
+
+
+              </select>
+                <input onChange={event => {
+                setMatchState(prev => ({ ...prev, first_player_score: event.target.value }));
+              }} className='py-2 px-4 rounded-sm border-gray-100 border-2 max-w-96' placeholder='First player score'></input>
+               <select onChange={event => {
+                setMatchState(prev => ({ ...prev, second_player: event.target.value }));
+              }} className='py-2 px-4 rounded-sm border-gray-100 border-2 max-w-96' placeholder='Username' >
+                {players.map(player => <option key={player.id} value={player.name}>{ player.name}</option>) }
+
+
+              </select>
+                 <input onChange={event => {
+                setMatchState(prev => ({ ...prev, second_player_score: event.target.value }));
+              }} className='py-2 px-4 rounded-sm border-gray-100 border-2 max-w-96' placeholder='Second Player Score'></input>
+              <button onClick={() => {
+                fetch(`${import.meta.env.VITE_API_URL}/log-match`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                  },
+                  body: JSON.stringify(matchState)
+                }).then(res => res.json()).then(() => {
+                  setMatchState({
+    first_player: '',
+    first_player_score: '',
+    second_player: '',
+    second_player_score: ''
+                  })
+                  window.location.reload()
+                })
+          }} className="my-4 mx-auto block pointer rounded-sm bg-indigo-600 text-white px-4 py-2">Log</button>
+          </div>}
           <div className="flex border-b">
             <button
               onClick={() => setActiveTab('matches')}
@@ -104,7 +164,32 @@ function App() {
                 ))}
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'login' ? <div className="py-4 flex flex-col gap-2 px-4">
+              <input onChange={event => {
+                setLoginState(prev => ({ ...prev, username: event.target.value }));
+              }} className='py-2 px-4 rounded-sm border-gray-100 border-2 max-w-96' placeholder='Username' />
+                <input onChange={event => {
+                setLoginState(prev => ({ ...prev, password: event.target.value }));
+              }} className='py-2 px-4 rounded-sm border-gray-100 border-2 max-w-96' placeholder='Password' type='password'></input>
+              <button onClick={
+                () => {
+                fetch(`${import.meta.env.VITE_API_URL}/login`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(loginState),
+                }
+                ).then(res => res.json()).then(data => {
+                  setLoginState({ username: '', password: '' });
+                  
+                  localStorage.setItem('token', data.token);
+                  window.location.reload()
+
+                })
+            
+          }} className="my-4 mx-auto block pointer rounded-sm bg-indigo-600 text-white px-4 py-2">Login</button>
+            </div> : (
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-6">Victory Leaderboard</h2>
               <div className="space-y-3">
